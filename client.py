@@ -143,59 +143,39 @@ class Client:
 
     def sendRtspRequest(self, requestCode):
         """Send RTSP request to the server."""
-        # -------------
-        # TO COMPLETE
-        # -------------
-
         # Setup request
         if requestCode == self.SETUP and self.state == self.INIT:
             threading.Thread(target=self.recvRtspReply).start()
             self.rtspSeq += 1
             request = "SETUP " + self.fileName + " RTSP/1.0" + "\n" + "CSeq: " + str(self.rtspSeq) + "\n" + "Transport: RTP/UDP; client_port= " + str(self.rtpPort)
             self.requestSent = self.SETUP
-            self.rtspSocket.send(request.encode())
             self.state = self.READY
 
         # Play request
         elif requestCode == self.PLAY and self.state == self.READY:
-            print("test")
-        # Update RTSP sequence number.
-        # ...
-
-        # Write the RTSP request to be sent.
-        # request = ...
-
-        # Keep track of the sent request.
-        # self.requestSent = ...
+            self.rtspSeq += 1
+            request = "PLAY " + self.fileName + " RTSP/1.0" + "\n" + "CSeq: " + str(self.rtspSeq) + "\n" + "Session: " + str(self.sessionId)
+            self.requestSent = self.PLAY
+            self.state = self.PLAYING
 
         # Pause request
         elif requestCode == self.PAUSE and self.state == self.PLAYING:
-            print("test")
-        # Update RTSP sequence number.
-        # ...
-
-        # Write the RTSP request to be sent.
-        # request = ...
-
-        # Keep track of the sent request.
-        # self.requestSent = ...
+            self.rtspSeq += 1
+            request = "PAUSE " + self.fileName + " RTSP/1.0" + "\n" + "CSeq: " + str(self.rtspSeq) + "\n" + "Session: " + str(self.sessionId)
+            self.requestSent = self.PAUSE
+            self.state = self.READY
 
         # Teardown request
         elif requestCode == self.TEARDOWN and not self.state == self.INIT:
-            print("test")
-        # Update RTSP sequence number.
-        # ...
+            self.rtspSeq += 1
+            request = "TEARDOWN " + self.fileName + " RTSP/1.0" + "\n" + "CSeq: " + str(self.rtspSeq) + "\n" + "Session: " + str(self.sessionId)
+            self.requestSent = self.TEARDOWN
+            self.state = self.INIT
 
-        # Write the RTSP request to be sent.
-        # request = ...
-
-        # Keep track of the sent request.
-        # self.requestSent = ...
         else:
             return
 
-        # Send the RTSP request using rtspSocket.
-        # ...
+        self.rtspSocket.send(request.encode())
 
         print('\nData sent:\n' + request)
 
@@ -229,25 +209,17 @@ class Client:
             if self.sessionId == session:
                 if int(lines[0].split(' ')[1]) == 200:
                     if self.requestSent == self.SETUP:
-                        # -------------
-                        # TO COMPLETE
-                        # -------------
-                        # Update RTSP state.
-                        # self.state = ...
-
-                        # Open RTP port.
+                        self.state = self.READY
                         self.openRtpPort()
                     elif self.requestSent == self.PLAY:
-                        print("test")
-                    # self.state = ...
+                        self.state = self.PLAYING
                     elif self.requestSent == self.PAUSE:
-                        # self.state = ...
-
+                        self.state = self.READY
                         # The play thread exits. A new thread is created on resume.
                         self.playEvent.set()
                     elif self.requestSent == self.TEARDOWN:
                         # self.state = ...
-
+                        self.state = self.INIT
                         # Flag the teardownAcked to close the socket.
                         self.teardownAcked = 1
 
@@ -258,12 +230,12 @@ class Client:
         # -------------
         # Create a new datagram socket to receive RTP packets from the server
         # self.rtpSocket = ...
-
+        self.rtpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # Set the timeout value of the socket to 0.5sec
         # ...
-
+        self.rtpSocket.settimeout(0.5)
         try:
-            print("test")
+            self.rtpSocket.bind(('localhost', self.rtpPort))
         # Bind the socket to the address using the RTP port given by the client user
         # ...
         except:
